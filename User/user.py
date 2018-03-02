@@ -1,7 +1,7 @@
 import socket
 import datetime
 from Crypto.PublicKey import RSA
-
+import hashlib
 
 
 def user_pk_generation():
@@ -12,15 +12,15 @@ def user_pk_generation():
     encrypted_key = key.exportKey(passphrase=secret_code, pkcs=8,
                               protection="scryptAndAES128-CBC")
 
-    file_out = open("rsa_private_key.bin", "wb")
+    file_out = open("rsa_user_private_key.bin", "wb")
     file_out.write(encrypted_key)
-    file_out = open("rsa_public_key.bin", 'wb')
+    file_out = open("rsa_user_public_key.bin", 'wb')
     file_out.write(key.publickey().exportKey())
 
 
 #user_pk_generation()
 
-public_key = open("rsa_public_key.bin", "rb").read()
+public_key = open("rsa_user_public_key.bin", "rb").read()
 
 
 card_number = 1000
@@ -42,8 +42,24 @@ while True:
     package = ''.join([m, '\t', socket.gethostbyname(socket.gethostname()), '\t', str(public_key), '\t', str(deposited_sum)])
     s.send(bytes(package, 'utf-8'))
 
-    print("Sent: ", package)
-    print("REPLY From Server: " + s.recv(4096).decode('utf-8'))
+    #print("Sent: ", package)
+    received_certif = s.recv(4096).decode('utf-8')
+    initial = received_certif
+    bank_public_key = str(received_certif).split('\t')[3].replace('b\'', '', 1)
+    bank_public_key = bank_public_key.replace('\'', '', 11)
+    print("Bank public key: ", bank_public_key)
+    received_signature = str(received_certif).split('\t')[7]
+    print("signature: ", received_signature)
+    received_c = str(str(received_certif).split(received_signature)[0])[1:]
+    #print(len(received_signature))
+    print("certif: ", received_c)
+    hash = hashlib.sha256()
+    hash.update(bytes(received_c, 'utf-8'))
+    print("hashed package: ", hash.hexdigest())
+    file_out = open("temp_rsa_bank_public_key.bin", "w").write(bank_public_key)
+    print(len(bank_public_key))
+    bank_pk = RSA.import_key(open("rsa_user_public_key.bin", 'rb').read())
+    #print("REPLY From Server: " + initial)
 
 
 
