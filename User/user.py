@@ -3,11 +3,12 @@ import datetime
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 import hashlib
+import base64
 
 
 def user_pk_generation():
     secret_code = "generic_passw0rd"
-    key = RSA.generate(2048)
+    key = RSA.generate(1024)
 
     #generation of public/private key pair
     encrypted_key = key.exportKey(passphrase=secret_code, pkcs=8,
@@ -19,7 +20,7 @@ def user_pk_generation():
     file_out.write(key.publickey().exportKey())
 
 
-#user_pk_generation()
+user_pk_generation()
 
 public_key = open("rsa_user_public_key.bin", "rb").read()
 
@@ -54,9 +55,9 @@ while True:
     received_c = str(str(received_certif).split(received_signature)[0])[1:]
     #print(len(received_signature))
     print("certif: ", received_c)
-    hash = hashlib.sha256()
+    hash = hashlib.md5()
     hash.update(bytes(received_c, 'utf-8'))
-    print("hashed package: ", hash.hexdigest())
+    print("hashed package: ", base64.b64decode(hash.hexdigest()))
     file_out = open("temp.bin", "w+")
     print(bank_public_key.split('\\n'))
     for item in bank_public_key.split('\\n'):
@@ -66,7 +67,7 @@ while True:
     print(len(bank_public_key))
     bank_pk = RSA.import_key(open("temp.bin", 'rb').read())
     cipher_rsa = PKCS1_OAEP.new(bank_pk)
-    decrypted_hash = cipher_rsa.decrypt(received_signature)
+    decrypted_hash = cipher_rsa.encrypt(RSA.tobytes(received_signature))
     #print("REPLY From Server: " + initial)
 
 

@@ -5,8 +5,9 @@ import sys
 import datetime
 import random
 from Crypto.PublicKey import RSA
-from Crypto.Cipher import PKCS1_OAEP
+from Crypto.Cipher import DES, PKCS1_OAEP
 import hashlib
+import base64
 
 host = '127.0.0.1'
 port = 1234
@@ -24,7 +25,7 @@ clients = [serversocket]
 
 def bank_pk_generation():
     secret_code = "some_passw0rd"
-    key = RSA.generate(2048)
+    key = RSA.generate(1024)
 
     #generation of public/private key pair
     encrypted_key = key.exportKey(passphrase=secret_code, pkcs=8,
@@ -35,7 +36,7 @@ def bank_pk_generation():
     file_out = open("rsa_bank_public_key.bin", 'wb')
     file_out.write(key.publickey().exportKey())
 
-#bank_pk_generation()
+bank_pk_generation()
 
 
 def handler(clientsocket, clientaddr):
@@ -67,16 +68,25 @@ def handler(clientsocket, clientaddr):
             bank_package = ''.join([full_name, '\t', ip_adress, '\t', bank_public_key, '\t', str(deposited_sum),
                                     '\t', str(expiry_date), '\t', str(card_number), '\t'])
 
-            hash = hashlib.sha256()
+            hash = hashlib.md5()
+
             hash.update(bytes(bank_package, 'utf-8'))
-            print("hashed package: ", hash.hexdigest())
+            print("hashed package: ", base64.b64decode(hash.hexdigest()))
             bank_private_key = RSA.import_key(open('rsa_bank_private_key.bin').read(), "some_passw0rd")
             cipher_rsa = PKCS1_OAEP.new(bank_private_key)
             bank_signed_package = cipher_rsa.encrypt(hash.digest())
             print(len(bank_package))
+            print("Bank signed: ", bank_signed_package)
             bank_signed_package = str(bank_signed_package).replace('b\'', '', 1)
             bank_signed_package = bank_signed_package[:-1]
             print("Bank signed: ", bank_signed_package)
+
+
+            #des_session_key = RSA.tobytes("12345678")
+            #cipher_des = DES.new(des_session_key, DES.MODE_OFB)
+            #ciphertext = cipher_des.iv + cipher_des.encrypt(RSA.tobytes(bank_signed_package))
+            #print("AES: ", ciphertext)
+
             complete_package = bank_package.join(['\t', bank_signed_package])
             #print(len(bank_signed_package))
             #print(len(complete_package))
