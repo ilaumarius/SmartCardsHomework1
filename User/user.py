@@ -1,6 +1,7 @@
 import socket
 import datetime
 from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
 import hashlib
 
 
@@ -56,9 +57,16 @@ while True:
     hash = hashlib.sha256()
     hash.update(bytes(received_c, 'utf-8'))
     print("hashed package: ", hash.hexdigest())
-    file_out = open("temp_rsa_bank_public_key.bin", "w").write(bank_public_key)
+    file_out = open("temp.bin", "w+")
+    print(bank_public_key.split('\\n'))
+    for item in bank_public_key.split('\\n'):
+        file_out.write(item + '\n')
+    file_out.close()
+
     print(len(bank_public_key))
-    bank_pk = RSA.import_key(open("rsa_user_public_key.bin", 'rb').read())
+    bank_pk = RSA.import_key(open("temp.bin", 'rb').read())
+    cipher_rsa = PKCS1_OAEP.new(bank_pk)
+    decrypted_hash = cipher_rsa.decrypt(received_signature)
     #print("REPLY From Server: " + initial)
 
 
