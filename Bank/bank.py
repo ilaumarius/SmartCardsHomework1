@@ -36,7 +36,7 @@ def bank_pk_generation():
     file_out = open("rsa_bank_public_key.bin", 'wb')
     file_out.write(key.publickey().exportKey())
 
-bank_pk_generation()
+#bank_pk_generation()
 
 
 def handler(clientsocket, clientaddr):
@@ -71,7 +71,7 @@ def handler(clientsocket, clientaddr):
             hash = hashlib.md5()
 
             hash.update(bytes(bank_package, 'utf-8'))
-            print("hashed package: ", base64.b64decode(hash.hexdigest()))
+            print("hashed package: ", hash.hexdigest())
             bank_private_key = RSA.import_key(open('rsa_bank_private_key.bin').read(), "some_passw0rd")
             cipher_rsa = PKCS1_OAEP.new(bank_private_key)
             bank_signed_package = cipher_rsa.encrypt(hash.digest())

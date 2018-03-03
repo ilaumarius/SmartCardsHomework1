@@ -20,7 +20,7 @@ def user_pk_generation():
     file_out.write(key.publickey().exportKey())
 
 
-user_pk_generation()
+#user_pk_generation()
 
 public_key = open("rsa_user_public_key.bin", "rb").read()
 
@@ -57,7 +57,7 @@ while True:
     print("certif: ", received_c)
     hash = hashlib.md5()
     hash.update(bytes(received_c, 'utf-8'))
-    print("hashed package: ", base64.b64decode(hash.hexdigest()))
+    print("hashed package: ", hash.hexdigest())
     file_out = open("temp.bin", "w+")
     print(bank_public_key.split('\\n'))
     for item in bank_public_key.split('\\n'):
