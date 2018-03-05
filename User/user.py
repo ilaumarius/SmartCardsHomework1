@@ -5,6 +5,7 @@ from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
 import hashlib
 import base64
+import codecs
 
 
 def verify_sign(public_key_loc, signature, data):
@@ -15,10 +16,13 @@ def verify_sign(public_key_loc, signature, data):
     #digest = hashlib.sha256()
     # Assumes the data is base64 encoded to begin with
     digest.update(base64.b64decode(data))
+    #ds = codecs.getdecoder("unicode_escape")(base64.b64decode(signature).decode('utf-8'))[0].encode('utf-8')
+    ds = base64.b64decode(signature).decode('utf-8')
     print("FROM FUNC digest:", digest.digest())
-    print("FROM FUNC signature:", base64.b64decode(signature))
-    t = str(base64.b64decode(signature)).replace('\\\\\\', 'P')
-    if signer.verify(digest, base64.b64decode(signature)):
+    print("FROM FUNC signature:", ds)
+    #t = str(base64.b64decode(signature)).replace('\\\\\\', 'P')
+
+    if signer.verify(digest, ds):
         return True
     return False
 
