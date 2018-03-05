@@ -1,9 +1,26 @@
 import socket
 import datetime
 from Crypto.PublicKey import RSA
-from Crypto.Cipher import PKCS1_OAEP
+from Crypto.Signature import PKCS1_v1_5
+from Crypto.Hash import SHA256
 import hashlib
 import base64
+
+
+def verify_sign(public_key_loc, signature, data):
+    pub_key = open(public_key_loc, "r").read()
+    rsakey = RSA.importKey(pub_key)
+    signer = PKCS1_v1_5.new(rsakey)
+    digest = SHA256.new()
+    #digest = hashlib.sha256()
+    # Assumes the data is base64 encoded to begin with
+    digest.update(base64.b64decode(data))
+    print("FROM FUNC digest:", digest.digest())
+    print("FROM FUNC signature:", base64.b64decode(signature))
+    t = str(base64.b64decode(signature)).replace('\\\\\\', 'P')
+    if signer.verify(digest, base64.b64decode(signature)):
+        return True
+    return False
 
 
 def user_pk_generation():
@@ -46,6 +63,9 @@ while True:
 
     #print("Sent: ", package)
     received_certif = s.recv(4096).decode('utf-8')
+    #received_certif = str(base64.b64decode(s.recv(4096)))
+
+    print(received_certif)
     initial = received_certif
     bank_public_key = str(received_certif).split('\t')[3].replace('b\'', '', 1)
     bank_public_key = bank_public_key.replace('\'', '', 11)
@@ -55,20 +75,39 @@ while True:
     received_c = str(str(received_certif).split(received_signature)[0])[1:]
     #print(len(received_signature))
     print("certif: ", received_c)
-    hash = hashlib.md5()
+    hash = hashlib.sha256()
     hash.update(bytes(received_c, 'utf-8'))
-    print("hashed package: ", hash.hexdigest())
+    hashed_package = hash.digest()
+    print("hashed package: ", hashed_package)
     file_out = open("temp.bin", "w+")
     print(bank_public_key.split('\\n'))
+    k = len(bank_public_key.split('\\n'))
+    c = 0
     for item in bank_public_key.split('\\n'):
-        file_out.write(item + '\n')
+        c += 1
+        if c != k:
+            file_out.write(item + '\n')
+        else:
+            file_out.write(item)
     file_out.close()
 
-    print(len(bank_public_key))
-    bank_pk = RSA.import_key(open("temp.bin", 'rb').read())
-    cipher_rsa = PKCS1_OAEP.new(bank_pk)
-    decrypted_hash = cipher_rsa.encrypt(RSA.tobytes(received_signature))
+    #print(len(bank_public_key))
+    #bank_pk = RSA.import_key(open("temp.bin", 'rb').read())
+    #cipher_rsa = PKCS1_OAEP.new(bank_pk)
+    #print("length: ", len(received_signature), received_signature)
+    #decrypted_signature = cipher_rsa.encrypt(RSA.tobytes(received_signature))
+    #print("Decrypted signature: ", decrypted_signature)
+    #print("Hashed package: ", hashed_package)
     #print("REPLY From Server: " + initial)
+
+    print("data: ", received_c)
+    print("signature: ", received_signature)
+    k1 = base64.b64encode(received_c.encode())
+    k2 = base64.b64encode(received_signature.encode())
+    print("encoded data: ", k1)
+    print("encoded signature: ", k2)
+
+    print(verify_sign("temp.bin", k2, k1))
 
 
 

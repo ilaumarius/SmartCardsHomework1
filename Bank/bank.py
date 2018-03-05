@@ -5,8 +5,11 @@ import sys
 import datetime
 import random
 from Crypto.PublicKey import RSA
-from Crypto.Cipher import DES, PKCS1_OAEP
+from Crypto.Cipher import DES, PKCS1_OAEP, PKCS1_v1_5
+from Crypto.Random import get_random_bytes
+from Crypto.Hash import SHA256
 import hashlib
+import base64
 import base64
 
 host = '127.0.0.1'
@@ -65,33 +68,45 @@ def handler(clientsocket, clientaddr):
             bank_public_key = str(bank_public_key).replace('b\'', '', 1)
             bank_public_key = bank_public_key.replace('\'', '', 1)
             expiry_date = (datetime.date.today() + datetime.timedelta(365 / 12)).isoformat()
+            des_session_key = get_random_bytes(8)
+            print("Clasic key: ", des_session_key)
+            print("Str key:", des_session_key)
             bank_package = ''.join([full_name, '\t', ip_adress, '\t', bank_public_key, '\t', str(deposited_sum),
                                     '\t', str(expiry_date), '\t', str(card_number), '\t'])
 
-            hash = hashlib.md5()
+            hash = SHA256.new()
 
             hash.update(bytes(bank_package, 'utf-8'))
-            print("hashed package: ", hash.hexdigest())
+            #hash.update(base64.b64encode(bank_package))
+            print("hashed package: ", hash.digest())
+
+            #cipher_des = DES.new(des_session_key, DES.MODE_OFB)
+            #ciphertext = cipher_des.iv + cipher_des.encrypt(RSA.tobytes(bank_signed_package))
+            #print("DES: ", ciphertext)
+
             bank_private_key = RSA.import_key(open('rsa_bank_private_key.bin').read(), "some_passw0rd")
-            cipher_rsa = PKCS1_OAEP.new(bank_private_key)
+            cipher_rsa = PKCS1_v1_5.new(bank_private_key)
             bank_signed_package = cipher_rsa.encrypt(hash.digest())
             print(len(bank_package))
             print("Bank signed: ", bank_signed_package)
             bank_signed_package = str(bank_signed_package).replace('b\'', '', 1)
             bank_signed_package = bank_signed_package[:-1]
-            print("Bank signed: ", bank_signed_package)
-
-
-            #des_session_key = RSA.tobytes("12345678")
-            #cipher_des = DES.new(des_session_key, DES.MODE_OFB)
-            #ciphertext = cipher_des.iv + cipher_des.encrypt(RSA.tobytes(bank_signed_package))
-            #print("AES: ", ciphertext)
-
+            #print("Bank signed: ", bank_signed_package)
+            #print("Bank signed: ", base64.b64encode(bank_signed_package.encode()))
+            t1 = base64.b64encode(bank_package.encode())
+            t2 = base64.b64encode(bank_signed_package.encode())
+            print("data: ", bank_package)
+            print("signature: ", bank_signed_package)
+            print("t1: ", t1)
+            print("t2: ", t2)
             complete_package = bank_package.join(['\t', bank_signed_package])
+            #complete_package = t1 + base64.b64encode('\t'.encode()) + t2
             #print(len(bank_signed_package))
             #print(len(complete_package))
             print(complete_package)
             clientsocket.send(bytes(complete_package, 'utf-8'))
+            #print(base64.b64encode(complete_package))
+            #clientsocket.send(complete_package)
 
 
 
