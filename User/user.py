@@ -10,18 +10,24 @@ import codecs
 
 def verify_sign(public_key_loc, signature, data):
     pub_key = open(public_key_loc, "r").read()
+    print("FUNCTION DATA: ", data)
+    print("FUNCTION SIGNATURE: ", signature)
     rsakey = RSA.importKey(pub_key)
     signer = PKCS1_v1_5.new(rsakey)
     digest = SHA256.new()
     #digest = hashlib.sha256()
-    # Assumes the data is base64 encoded to begin with
-    digest.update(base64.b64decode(data))
-    #ds = codecs.getdecoder("unicode_escape")(base64.b64decode(signature).decode('utf-8'))[0].encode('utf-8')
-    ds = base64.b64decode(signature).decode('utf-8')
-    print("FROM FUNC digest:", digest.digest())
-    print("FROM FUNC signature:", ds)
+
+    digest.update(bytes(data, 'utf-8'))
+    #digest.update(base64.b64decode(data))
+    #ds = bytes(codecs.getdecoder("unicode_escape")(signature)[0], 'utf-8')
+    #ds = bytes(signature, 'utf-8')
+    ds = RSA.tobytes(signature)
+    print("FROM FUNC digest: ", digest.digest())
+    print("FROM FUNC signature: ", ds)
+    print("FROM FUNC signature len: ", len(ds))
     #t = str(base64.b64decode(signature)).replace('\\\\\\', 'P')
 
+    kk = signer.verify(digest, ds)
     if signer.verify(digest, ds):
         return True
     return False
@@ -66,25 +72,36 @@ while True:
     s.send(bytes(package, 'utf-8'))
 
     #print("Sent: ", package)
-    received_certif = s.recv(4096).decode('utf-8')
+    received_certif = RSA.tostr(s.recv(4096)) #.decode('utf-8')
     #received_certif = str(base64.b64decode(s.recv(4096)))
 
-    print(received_certif)
+    #print(received_certif)
     initial = received_certif
+    print("FULL CERTIF: ", received_certif)
     bank_public_key = str(received_certif).split('\t')[3].replace('b\'', '', 1)
     bank_public_key = bank_public_key.replace('\'', '', 11)
-    print("Bank public key: ", bank_public_key)
-    received_signature = str(received_certif).split('\t')[7]
-    print("signature: ", received_signature)
+    #print("Bank public key: ", bank_public_key)
+    received_signature = received_certif.split('\t')[7]
+    ks = str()
+    for item in received_certif.split('\t')[7:]:
+        ks += item
+        ks += '\t'
+        print("ITEM: ", item)
+    ks = ks[:-1]
+    print("KKKKK: ", len(ks), ks)
+    #print("Splits :", received_certif.split('\t'))
+
+    #print("signature: ", received_signature)
+    #print("LEN SIGNATURE: ", len(received_signature))
     received_c = str(str(received_certif).split(received_signature)[0])[1:]
-    #print(len(received_signature))
+    #print(type(received_c))
     print("certif: ", received_c)
-    hash = hashlib.sha256()
+    hash = SHA256.new()
     hash.update(bytes(received_c, 'utf-8'))
     hashed_package = hash.digest()
     print("hashed package: ", hashed_package)
     file_out = open("temp.bin", "w+")
-    print(bank_public_key.split('\\n'))
+    #print(bank_public_key.split('\\n'))
     k = len(bank_public_key.split('\\n'))
     c = 0
     for item in bank_public_key.split('\\n'):
@@ -108,10 +125,12 @@ while True:
     print("signature: ", received_signature)
     k1 = base64.b64encode(received_c.encode())
     k2 = base64.b64encode(received_signature.encode())
-    print("encoded data: ", k1)
-    print("encoded signature: ", k2)
+    #print("encoded data: ", k1)
+    #print("encoded signature: ", k2)
 
-    print(verify_sign("temp.bin", k2, k1))
+    print("KKKKK: ", len(ks), ks)
+    #print("KKKKK: ", len(received_signature), received_signature)
+    print(verify_sign("temp.bin", ks, received_c))
 
 
 
