@@ -3,6 +3,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
 from Crypto.Random import get_random_bytes
 from Crypto.Hash import SHA256
+import datetime
 import base64
 
 
@@ -107,6 +108,7 @@ def bank_register():
 
         #print("KKKKK: ", len(ks), ks)
         #print("KKKKK: ", len(received_signature), received_signature)
+        open("signature.bin", "wb").write(RSA.tobytes(ks))
         print(verify_sign("temp.bin", ks, received_c))
 
 
@@ -115,12 +117,82 @@ def generate_new_hash_chain(chain_length):
     initial_hash = SHA256.new(hash_base).digest()
     for index in range(chain_length-1):
         hasher = SHA256.new(initial_hash).digest()
-        print(hasher)
+        #print(hasher)
         initial_hash = hasher
     return hasher
 
+
 def pay():
-    pass
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect(("127.0.0.1", 1250))
+
+    while True:
+        vendor_name = s.recv(4096).decode('utf-8')
+        print(vendor_name)
+        sig = RSA.tostr(open("signature.bin", "rb").read())
+        chain_length = input("Choose chain length:")
+        chain_base = RSA.tostr(generate_new_hash_chain(int(chain_length)))
+        actual_date = (datetime.date.today()).isoformat()
+        commit = ''.join(
+                [vendor_name, '\t', sig, '\t', chain_base, '\t', str(actual_date), '\t', str(chain_length)])
+        print(commit)
+        #product_number = input("Choose product number: ")
+        #s.send(bytes(product_number, 'utf-8'))
+
+        #print(s.recv(4096).decode('utf-8'))
+        #m = input("Full name: ")
+        #deposited_sum = input("Deposited_sum: ")
+        #if m == "exit":
+        #    s.close()
+        #    print("Connection closed")
+        #package = ''.join(
+        #    [m, '\t', socket.gethostbyname(socket.gethostname()), '\t', str(public_key), '\t', str(deposited_sum)])
+        #s.send(bytes(package, 'utf-8'))
+
+        ''''# print(s.recv(4096).decode('utf-8'))
+        received_certif = RSA.tostr(s.recv(4096))  # .decode('utf-8')
+
+        initial = received_certif
+        # print("FULL CERTIF: ", received_certif)
+        bank_public_key = str(received_certif).split('\t')[3].replace('b\'', '', 1)
+        bank_public_key = bank_public_key.replace('\'', '', 11)
+        received_signature = received_certif.split('\t')[7]
+        ks = str()
+        for item in received_certif.split('\t')[7:]:
+            ks += item
+            ks += '\t'
+            # print("ITEM: ", item)
+        ks = ks[:-1]
+
+        received_c = str(str(received_certif).split(received_signature)[0])[1:]
+        # print("certif: ", received_c)
+        hash = SHA256.new()
+        hash.update(bytes(received_c, 'utf-8'))
+        hashed_package = hash.digest()
+        # print("hashed package: ", hashed_package)
+        file_out = open("temp.bin", "w+")
+
+        k = len(bank_public_key.split('\\n'))
+        c = 0
+        for item in bank_public_key.split('\\n'):
+            c += 1
+            if c != k:
+                file_out.write(item + '\n')
+            else:
+                file_out.write(item)
+        file_out.close()
+
+        # print("data: ", received_c)
+        # print("signature: ", received_signature)
+        # k1 = base64.b64encode(received_c.encode())
+        # k2 = base64.b64encode(received_signature.encode())
+        # print("encoded data: ", k1)
+        # print("encoded signature: ", k2)
+
+        # print("KKKKK: ", len(ks), ks)
+        # print("KKKKK: ", len(received_signature), received_signature)
+        print(verify_sign("temp.bin", ks, received_c))'''
+pay()
 #bank_register()
 #generate_new_hash_chain(4)
 
