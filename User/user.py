@@ -137,34 +137,53 @@ def pay():
     while True:
         vendor_name = s.recv(4096).decode('utf-8')
         print(vendor_name)
+        check = False
+        with open("vendors_list.txt", "r") as f:
+            file_lines = [x for x in f.readlines()]
+            for item in file_lines:
+                print(item)
+                if vendor_name == item[:-1]:
+                    check = True
+                    break
+        f.close()
+
         menu_option = s.recv(4096).decode('utf-8')
         print(menu_option)
         menu_sent = input("choose option: ")
         s.send(bytes(menu_sent, 'utf-8'))
+        print(s.recv(4096).decode('utf-8'))
         product_number = input("Choose product number: ")
         s.send(bytes(product_number, 'utf-8'))
-        sig = RSA.tostr(open("signature.bin", "rb").read())
-        chain_length = input("Choose chain length:")
-        chain_base = RSA.tostr(generate_new_hash_chain(int(chain_length))[-1])
-        actual_date = (datetime.date.today()).isoformat()
 
-        commit = ''.join(
-                [sig, '\t', str(actual_date),'\t', chain_base,  '\t', str(chain_length), '\t', vendor_name, '\t'])
-        user_private_key = RSA.import_key(open('rsa_user_private_key.bin').read(), "generic_passw0rd")
-        cipher_rsa = PKCS1_v1_5.new(user_private_key)
-        print("HEREEEE")
-        print(commit, len(commit))
-        hash = SHA256.new()
-        hash.update(bytes(commit, 'utf-8'))
-        signed_commit = RSA.tostr(cipher_rsa.sign(hash))
+        if not check:
+            sig = RSA.tostr(open("signature.bin", "rb").read())
+            chain_length = input("Choose chain length:")
+            hash_chain = generate_new_hash_chain(int(chain_length))
+            chain_base = RSA.tostr(hash_chain[-1])
+            print("HASH CHAIN: ", hash_chain)
+            actual_date = (datetime.date.today()).isoformat()
 
-        complete_package = commit.join(['\t', signed_commit])
-        print("signed_commit:", signed_commit, len(signed_commit))
-        print(type(complete_package))
-        print("Complete package: ", complete_package, len(complete_package))
-        #product_number = input("Choose product number: ")
-        s.send(bytes(complete_package, 'utf-8'))
+            commit = ''.join(
+                    [sig, '\t', str(actual_date),'\t', chain_base,  '\t', str(chain_length), '\t', vendor_name, '\t'])
+            user_private_key = RSA.import_key(open('rsa_user_private_key.bin').read(), "generic_passw0rd")
+            cipher_rsa = PKCS1_v1_5.new(user_private_key)
+            print("HEREEEE")
+            print(commit, len(commit))
+            hash = SHA256.new()
+            hash.update(bytes(commit, 'utf-8'))
+            signed_commit = RSA.tostr(cipher_rsa.sign(hash))
 
+            complete_package = commit.join(['\t', signed_commit])
+            print("signed_commit:", signed_commit, len(signed_commit))
+            print(type(complete_package))
+            print("Complete package: ", complete_package, len(complete_package))
+            #product_number = input("Choose product number: ")
+            s.send(bytes(complete_package, 'utf-8'))
+            check = s.recv(4096).decode('utf-8')
+            print(check)
+            if check == "Signatures passed.":
+                with open("vendors_list.txt", "a") as f:
+                    f.write(vendor_name + '\n')
         #print(s.recv(4096).decode('utf-8'))
         #m = input("Full name: ")
         #deposited_sum = input("Deposited_sum: ")

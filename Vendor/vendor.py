@@ -78,7 +78,8 @@ def handler(clientsocket, clientaddr):
 
             #print(type(data))
             print("sig:", signature, len(signature))
-            print(verify_sign("../User/rsa_user_public_key.bin", conc_sign, conc_data))
+            user_sign_check = verify_sign("../User/rsa_user_public_key.bin", conc_sign, conc_data)
+            print(user_sign_check)
             print(complete_package.split('\t'))
             other_sig = str()
             print(complete_package.split('\t'))
@@ -87,7 +88,11 @@ def handler(clientsocket, clientaddr):
             other_sig = other_sig[:-1]
             print(other_sig)
             data_from_bank = open("../User/message.bin").read()
-            print(verify_sign("../Bank/rsa_bank_public_key.bin", other_sig, data_from_bank))
+            bank_sign_check = verify_sign("../Bank/rsa_bank_public_key.bin", other_sig, data_from_bank)
+            print(bank_sign_check)
+            if user_sign_check and bank_sign_check:
+                clientsocket.send(bytes("Signatures passed.", 'utf-8'))
+
             #clientsocket.send(bytes("Send X cash.", 'utf-8'))
             '''
             package_list = str(product_number).split('\t')
