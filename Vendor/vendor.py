@@ -22,6 +22,27 @@ serversocket.listen(10)
 clients = [serversocket]
 
 
+def verify_sign(public_key_loc, signature, data):
+    pub_key = open(public_key_loc, "r").read()
+    #print("FUNCTION DATA: ", data)
+    #print("FUNCTION SIGNATURE: ", signature)
+    rsakey = RSA.importKey(pub_key)
+    signer = PKCS1_v1_5.new(rsakey)
+    digest = SHA256.new()
+
+    digest.update(bytes(data, 'utf-8'))
+
+    ds = RSA.tobytes(signature)
+    #print("FROM FUNC digest: ", digest.digest())
+    #print("FROM FUNC signature: ", ds)
+    #print("FROM FUNC signature len: ", len(ds))
+
+    kk = signer.verify(digest, ds)
+    if signer.verify(digest, ds):
+        return True
+    return False
+
+
 def handler(clientsocket, clientaddr):
     print("Accepted connection from: ", clientaddr)
     m = input("Vendor name: ")
@@ -29,7 +50,7 @@ def handler(clientsocket, clientaddr):
     while True:
         clientsocket.send(bytes("Send 1 for payment. Send 'exit' to quit.", 'utf-8'))
         menu_option = clientsocket.recv(4096).decode('utf-8')
-        print(menu_option)
+        print("Menu option: ", menu_option)
         if menu_option == "exit" or not menu_option:
             print("Closing connection")
             clientsocket.send(bytes("Closing connection\n", 'utf-8'))
@@ -38,7 +59,35 @@ def handler(clientsocket, clientaddr):
         elif menu_option[0] == '1':
             clientsocket.send(bytes("Send product number.", 'utf-8'))
             product_number = clientsocket.recv(4096).decode('utf-8')
-            print(product_number)
+            #print(product_number)
+            complete_package = clientsocket.recv(4096).decode('utf-8')
+            print(type(complete_package))
+            print("Complete package: ", complete_package, len(complete_package))
+            print(complete_package.split('\t'))
+            data = complete_package.split('\t')[1:6]
+            signature = complete_package.split('\t')[6:]
+            conc_data = str()
+            conc_sign = str()
+            for item in data:
+                conc_data += item + '\t'
+            for item in signature:
+                conc_sign += item + '\t'
+            conc_sign = conc_sign[:-1]
+            #conc_data = conc_data[:-1]
+            print("conc_sign: ", conc_sign, len(conc_sign))
+
+            #print(type(data))
+            print("sig:", signature, len(signature))
+            print(verify_sign("../User/rsa_user_public_key.bin", conc_sign, conc_data))
+            print(complete_package.split('\t'))
+            other_sig = str()
+            print(complete_package.split('\t'))
+            for item in complete_package.split('\t')[1:2]:
+                other_sig += item + '\t'
+            other_sig = other_sig[:-1]
+            print(other_sig)
+            data_from_bank = open("../User/message.bin").read()
+            print(verify_sign("../Bank/rsa_bank_public_key.bin", other_sig, data_from_bank))
             #clientsocket.send(bytes("Send X cash.", 'utf-8'))
             '''
             package_list = str(product_number).split('\t')

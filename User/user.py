@@ -109,17 +109,25 @@ def bank_register():
         #print("KKKKK: ", len(ks), ks)
         #print("KKKKK: ", len(received_signature), received_signature)
         open("signature.bin", "wb").write(RSA.tobytes(ks))
+        open("message.bin", "wb").write(RSA.tobytes(received_c))
         print(verify_sign("temp.bin", ks, received_c))
 
 
 def generate_new_hash_chain(chain_length):
     hash_base = get_random_bytes(16)
     initial_hash = SHA256.new(hash_base).digest()
+    hash_chain_list = []
+    hash_chain_list.append(initial_hash)
     for index in range(chain_length-1):
         hasher = SHA256.new(initial_hash).digest()
         #print(hasher)
+        hash_chain_list.append(hasher)
         initial_hash = hasher
-    return hasher
+    hash_str = RSA.tostr(hasher)
+    if hash_str.find('\t') != -1:
+        generate_new_hash_chain(chain_length)
+    print("HASH LIST: ", hash_chain_list)
+    return hash_chain_list
 
 
 def pay():
@@ -129,15 +137,33 @@ def pay():
     while True:
         vendor_name = s.recv(4096).decode('utf-8')
         print(vendor_name)
+        menu_option = s.recv(4096).decode('utf-8')
+        print(menu_option)
+        menu_sent = input("choose option: ")
+        s.send(bytes(menu_sent, 'utf-8'))
+        product_number = input("Choose product number: ")
+        s.send(bytes(product_number, 'utf-8'))
         sig = RSA.tostr(open("signature.bin", "rb").read())
         chain_length = input("Choose chain length:")
-        chain_base = RSA.tostr(generate_new_hash_chain(int(chain_length)))
+        chain_base = RSA.tostr(generate_new_hash_chain(int(chain_length))[-1])
         actual_date = (datetime.date.today()).isoformat()
+
         commit = ''.join(
-                [vendor_name, '\t', sig, '\t', chain_base, '\t', str(actual_date), '\t', str(chain_length)])
-        print(commit)
+                [sig, '\t', str(actual_date),'\t', chain_base,  '\t', str(chain_length), '\t', vendor_name, '\t'])
+        user_private_key = RSA.import_key(open('rsa_user_private_key.bin').read(), "generic_passw0rd")
+        cipher_rsa = PKCS1_v1_5.new(user_private_key)
+        print("HEREEEE")
+        print(commit, len(commit))
+        hash = SHA256.new()
+        hash.update(bytes(commit, 'utf-8'))
+        signed_commit = RSA.tostr(cipher_rsa.sign(hash))
+
+        complete_package = commit.join(['\t', signed_commit])
+        print("signed_commit:", signed_commit, len(signed_commit))
+        print(type(complete_package))
+        print("Complete package: ", complete_package, len(complete_package))
         #product_number = input("Choose product number: ")
-        #s.send(bytes(product_number, 'utf-8'))
+        s.send(bytes(complete_package, 'utf-8'))
 
         #print(s.recv(4096).decode('utf-8'))
         #m = input("Full name: ")
