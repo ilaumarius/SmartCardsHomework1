@@ -130,13 +130,16 @@ def handler(clientsocket, clientaddr):
                         hasher = str()
                         print("HASH base: ", hashs_base)
                         print("PAY hash : ", payment_hash)
-                        initial_hash = bytes(hashs_base, 'utf-8')
+                        initial_hash = RSA.tobytes(payment_hash)
                         for index in range(int(payment_nr_of_hashes)):
                             hasher = SHA256.new(initial_hash).digest()
+                            print("hasher ind: ", RSA.tostr(hasher))
                             # print(hasher)
                             initial_hash = hasher
                         print("HASH base: ", hashs_base)
-                        print("Hasher f : ", hasher)
+                        print("Hasher f : ", RSA.tostr(hasher))
+                        if RSA.tostr(hasher) == hashs_base:
+                            print("VALID hashes => valid payment")
             
 
             #clientsocket.send(bytes("Send X cash.", 'utf-8'))
