@@ -135,6 +135,7 @@ def pay():
     s.connect(("127.0.0.1", 1250))
 
     while True:
+        user_name = input("Enter username: ")
         vendor_name = s.recv(4096).decode('utf-8')
         print(vendor_name)
         check = False
@@ -178,7 +179,7 @@ def pay():
             actual_date = (datetime.date.today()).isoformat()
 
             commit = ''.join(
-                    [sig, '\t', str(actual_date),'\t', chain_base,  '\t', str(chain_length), '\t', vendor_name, '\t'])
+                    [sig, '\t', str(actual_date),'\t', chain_base,  '\t', str(chain_length), '\t', vendor_name, '\t', user_name, '\t'])
             user_private_key = RSA.import_key(open('rsa_user_private_key.bin').read(), "generic_passw0rd")
             cipher_rsa = PKCS1_v1_5.new(user_private_key)
             print("HEREEEE")
@@ -205,6 +206,7 @@ def pay():
         payment_packet = "".join([RSA.tostr(hash_chain[-payment_nr-1]), '....', str(payment_nr)])
         print("Payment package: ", payment_packet)
 
+        s.send(bytes(user_name, 'utf-8'))
         s.send(bytes(payment_packet, 'utf-8'))
 
 

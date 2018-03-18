@@ -72,8 +72,8 @@ def handler(clientsocket, clientaddr):
                 print(type(complete_package))
                 print("Complete package: ", complete_package, len(complete_package))
                 print(complete_package.split('\t'))
-                data = complete_package.split('\t')[1:6]
-                signature = complete_package.split('\t')[6:]
+                data = complete_package.split('\t')[1:7]
+                signature = complete_package.split('\t')[7:]
                 conc_data = str()
                 conc_sign = str()
                 for item in data:
@@ -98,15 +98,45 @@ def handler(clientsocket, clientaddr):
                 data_from_bank = open("../User/message.bin").read()
                 bank_sign_check = verify_sign("../Bank/rsa_bank_public_key.bin", other_sig, data_from_bank)
                 print(bank_sign_check)
-                with open("commits.bin", "wb") as c:
-                    c.write(bytes(conc_data, 'utf-8'))
+                with open("commits.bin", "ab") as c:
+                    k = bytes(conc_data, 'utf-8') + b'\n'
+                    c.write(k)
 
                 if user_sign_check and bank_sign_check:
                     clientsocket.send(bytes("Signatures passed.", 'utf-8'))
 
             print("Payment")
+            payment_response = clientsocket.recv(4096).decode('utf-8')
+            print(payment_response)
+
+            user_name = clientsocket.recv(4096).decode('utf-8')
+            print(user_name)
+
             payment_package = clientsocket.recv(4096).decode('utf-8')
             print(payment_package)
+
+            payment_hash = payment_package.split('....')[0]
+            payment_nr_of_hashes = payment_package.split('....')[1]
+            print("Payment hash: ", payment_hash)
+
+            with open("commits.bin", "rb") as f:
+                file_lines = f.read()
+                for item in file_lines.split(b'\t\n')[:-1]:
+                    hashs_base = item.split(b'\t')[2:-3][0].decode('utf-8')
+                    name = item.split(b'\t')[-1].decode('utf-8')
+                    print(hashs_base, len(hashs_base))
+                    print(name)
+                    if name == user_name:
+                        hasher = str()
+                        print("HASH base: ", hashs_base)
+                        print("PAY hash : ", payment_hash)
+                        initial_hash = bytes(hashs_base, 'utf-8')
+                        for index in range(int(payment_nr_of_hashes)):
+                            hasher = SHA256.new(initial_hash).digest()
+                            # print(hasher)
+                            initial_hash = hasher
+                        print("HASH base: ", hashs_base)
+                        print("Hasher f : ", hasher)
             
 
             #clientsocket.send(bytes("Send X cash.", 'utf-8'))
