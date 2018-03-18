@@ -141,7 +141,6 @@ def pay():
         with open("vendors_list.txt", "r") as f:
             file_lines = [x for x in f.readlines()]
             for item in file_lines:
-                print(item)
                 if vendor_name == item[:-1]:
                     check = True
                     break
@@ -151,14 +150,29 @@ def pay():
         print(menu_option)
         menu_sent = input("choose option: ")
         s.send(bytes(menu_sent, 'utf-8'))
+        product_list = s.recv(4096).decode('utf-8')
+        print(product_list)
         print(s.recv(4096).decode('utf-8'))
         product_number = input("Choose product number: ")
         s.send(bytes(product_number, 'utf-8'))
 
+        with open("hashes.bin", "rb") as f:
+            file_lines = [x[:-1] for x in f.readlines()]
+        if len(file_lines) == 0:
+            chain_length = input("Choose chain length:")
+            hash_chain = generate_new_hash_chain(int(chain_length))
+        else:
+            hash_chain = file_lines
+
         if not check:
+            s.send(bytes("first_time", 'utf-8'))
             sig = RSA.tostr(open("signature.bin", "rb").read())
             chain_length = input("Choose chain length:")
             hash_chain = generate_new_hash_chain(int(chain_length))
+            with open("hashes.bin", "wb") as f:
+                for item in hash_chain:
+                    f.write(item)
+                    f.write(b'\n')
             chain_base = RSA.tostr(hash_chain[-1])
             print("HASH CHAIN: ", hash_chain)
             actual_date = (datetime.date.today()).isoformat()
@@ -184,6 +198,17 @@ def pay():
             if check == "Signatures passed.":
                 with open("vendors_list.txt", "a") as f:
                     f.write(vendor_name + '\n')
+
+        s.send(bytes("not_first_time", 'utf-8'))
+        product_number = int(product_number)
+        payment_nr = int(product_list.split('\n')[product_number-1].split(' ')[1][:-1])
+        payment_packet = "".join([RSA.tostr(hash_chain[-payment_nr-1]), '....', str(payment_nr)])
+        print("Payment package: ", payment_packet)
+
+        s.send(bytes(payment_packet, 'utf-8'))
+
+
+
         #print(s.recv(4096).decode('utf-8'))
         #m = input("Full name: ")
         #deposited_sum = input("Deposited_sum: ")

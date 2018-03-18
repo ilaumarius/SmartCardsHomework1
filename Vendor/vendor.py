@@ -57,41 +57,57 @@ def handler(clientsocket, clientaddr):
             break
 
         elif menu_option[0] == '1':
+            file_lines = str()
+            with open("product_list.txt", "r") as f:
+                for x in f.readlines():
+                    file_lines += x
+            clientsocket.send(bytes(file_lines, 'utf-8'))
             clientsocket.send(bytes("Send product number.", 'utf-8'))
             product_number = clientsocket.recv(4096).decode('utf-8')
             #print(product_number)
-            complete_package = clientsocket.recv(4096).decode('utf-8')
-            print(type(complete_package))
-            print("Complete package: ", complete_package, len(complete_package))
-            print(complete_package.split('\t'))
-            data = complete_package.split('\t')[1:6]
-            signature = complete_package.split('\t')[6:]
-            conc_data = str()
-            conc_sign = str()
-            for item in data:
-                conc_data += item + '\t'
-            for item in signature:
-                conc_sign += item + '\t'
-            conc_sign = conc_sign[:-1]
-            #conc_data = conc_data[:-1]
-            print("conc_sign: ", conc_sign, len(conc_sign))
+            first_val = clientsocket.recv(4096).decode('utf-8')
+            print(first_val)
+            if first_val == "first_time":
+                complete_package = clientsocket.recv(4096).decode('utf-8')
+                print(type(complete_package))
+                print("Complete package: ", complete_package, len(complete_package))
+                print(complete_package.split('\t'))
+                data = complete_package.split('\t')[1:6]
+                signature = complete_package.split('\t')[6:]
+                conc_data = str()
+                conc_sign = str()
+                for item in data:
+                    conc_data += item + '\t'
+                for item in signature:
+                    conc_sign += item + '\t'
+                conc_sign = conc_sign[:-1]
+                #conc_data = conc_data[:-1]
+                print("conc_sign: ", conc_sign, len(conc_sign))
 
-            #print(type(data))
-            print("sig:", signature, len(signature))
-            user_sign_check = verify_sign("../User/rsa_user_public_key.bin", conc_sign, conc_data)
-            print(user_sign_check)
-            print(complete_package.split('\t'))
-            other_sig = str()
-            print(complete_package.split('\t'))
-            for item in complete_package.split('\t')[1:2]:
-                other_sig += item + '\t'
-            other_sig = other_sig[:-1]
-            print(other_sig)
-            data_from_bank = open("../User/message.bin").read()
-            bank_sign_check = verify_sign("../Bank/rsa_bank_public_key.bin", other_sig, data_from_bank)
-            print(bank_sign_check)
-            if user_sign_check and bank_sign_check:
-                clientsocket.send(bytes("Signatures passed.", 'utf-8'))
+                #print(type(data))
+                print("sig:", signature, len(signature))
+                user_sign_check = verify_sign("../User/rsa_user_public_key.bin", conc_sign, conc_data)
+                print(user_sign_check)
+                print(complete_package.split('\t'))
+                other_sig = str()
+                print(complete_package.split('\t'))
+                for item in complete_package.split('\t')[1:2]:
+                    other_sig += item + '\t'
+                other_sig = other_sig[:-1]
+                print(other_sig)
+                data_from_bank = open("../User/message.bin").read()
+                bank_sign_check = verify_sign("../Bank/rsa_bank_public_key.bin", other_sig, data_from_bank)
+                print(bank_sign_check)
+                with open("commits.bin", "wb") as c:
+                    c.write(bytes(conc_data, 'utf-8'))
+
+                if user_sign_check and bank_sign_check:
+                    clientsocket.send(bytes("Signatures passed.", 'utf-8'))
+
+            print("Payment")
+            payment_package = clientsocket.recv(4096).decode('utf-8')
+            print(payment_package)
+            
 
             #clientsocket.send(bytes("Send X cash.", 'utf-8'))
             '''
